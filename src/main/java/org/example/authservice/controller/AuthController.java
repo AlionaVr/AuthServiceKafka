@@ -13,24 +13,24 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/auth")
+@RequestMapping("api")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
 
-    @PostMapping("/register")
+    @PostMapping("/auth/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegistrationRequest request) {
         authService.register(request.getEmail());
         return ResponseEntity.ok("Verification code is sent to  " + request.getEmail());
     }
 
-    @PostMapping("/verify")
+    @PostMapping("/auth/verify")
     public ResponseEntity<TokenResponse> verify(@Valid @RequestBody VerifyRequest request) {
         String token = authService.verify(request.getEmail(), request.getCode());
         return ResponseEntity.ok(new TokenResponse(token));
     }
 
-    @GetMapping("/api/protected")
+    @GetMapping("/protected")
     public ResponseEntity<List<User>> getUsers () {
         return ResponseEntity.ok(authService.getUsers());
     }

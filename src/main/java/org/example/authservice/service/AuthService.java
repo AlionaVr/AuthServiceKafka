@@ -8,6 +8,7 @@ import org.example.authservice.entity.VerificationCode;
 import org.example.authservice.exception.*;
 import org.example.authservice.repository.UserRepository;
 import org.example.authservice.repository.VerificationCodeRepository;
+import org.example.authservice.service.producer.VerificationCodeProducer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class AuthService {
 
     private static final int MAX_ATTEMPTS = 5;
     private static final SecureRandom random = new SecureRandom();
+    private final VerificationCodeProducer codeProducer;
 
 
     @Transactional
@@ -52,12 +54,12 @@ public class AuthService {
 
         VerificationCode verificationCode = VerificationCode.builder()
                 .email(email)
-                .codeHash(code)
+                .codeHash(hashCode(code))
                 .expiresAt(LocalDateTime.now().plusMinutes(codeExpirationMinutes))
                 .build();
         verificationCodeRepository.save(verificationCode);
-        // sending code to client
 
+        codeProducer.publish(email, code);
     }
 
 
