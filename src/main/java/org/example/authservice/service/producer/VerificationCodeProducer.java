@@ -1,12 +1,10 @@
 package org.example.authservice.service.producer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.example.authservice.dto.event.SendCodeEvent;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,27 +12,21 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class VerificationCodeProducer {
 
-    private final KafkaProducer<String, String> kafkaProducer;
-    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, SendCodeEvent> kafkaTemplate;
 
-    @Value("${kafka.topic.verification}")
+    @Value("${topics.verification-codes}")
     private String topic;
 
     public void publish(String email, String code) {
-        try {
-            String json = objectMapper.writeValueAsString(new SendCodeEvent(email, code));
-            ProducerRecord<String, String> record = new ProducerRecord<>(topic, email, json);
-
-            kafkaProducer.send(record, (metadata, exception) -> {
-                if (exception != null) {
-                    log.error("Failed to publish verification code to Kafka. email={}, {}", email, exception.getMessage());
-                } else {
-                    log.info("Verification code published. topic={}, partition={}, offset={}, email={}",
-                            metadata.topic(), metadata.partition(), metadata.offset(), email);
-                }
-            });
-        } catch (Exception e) {
-            log.error("Failed to serialize/publish verification code. email={}, {}", email, e.getMessage());
-        }
+        SendCodeEvent event = new SendCodeEvent(email, code);
+        kafkaTemplate.send(topic, email, event)
+                .whenComplete((result, exception) -> {
+                    if (exception != null) {
+                        log.error("Failed to publish verification code to Kafka. email={}, {}", email, exception.getMessage());
+                    } else {
+                        log.info("Verification code published. topic={}, partition={}, offset={}, email={}",
+                                result.getRecordMetadata().topic(), result.getRecordMetadata().partition(), result.getRecordMetadata().offset(), email);
+                    }
+                });
     }
 }
